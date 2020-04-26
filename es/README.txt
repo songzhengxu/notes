@@ -509,4 +509,181 @@ GET /tmdb/_validate/query?explain
 }
 
 
+# 过滤和排序
+# querySting 
+# 方便利用and or 
+GET /tmdb/_search
+{
+  "query": {
+    "query_string": {
+      "query":"basketball OR aliens",
+      "fields": ["title"]
+    }
+  }
+}
+
+# 方便利用and or 
+GET /tmdb/_search
+{
+  "query": {
+    "query_string": {
+      "query":"basketball AND aliens",
+      "fields": ["title"]
+    }
+  }
+}
+
+# filter 过滤查询
+GET /tmdb/_search
+{
+  "explain": true, 
+  "query": {
+   "bool": {
+     "filter": {
+       "term": {
+         "title": "steve"
+       }
+     }
+   }
+  }
+}
+
+# filter 多条件的过滤查询
+# 可以多个条件放在一起，是AND 关系
+GET /tmdb/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        { "term": {"title": "steve"}},
+        { "term": { "overview": "steve"}},
+        { "range": { "release_date": {"lte": "2015-10-19"}}},
+        { "range": { "vote_average": { "gte": 5} }}
+      ]
+    }
+  }
+}
+
+# sort 进行排序
+GET /tmdb/_search
+{
+  "query": {
+    "bool": {
+      "filter": [
+        { "term": {"title": "steve"}},
+        { "term": { "overview": "steve"}},
+        { "range": { "release_date": {"lte": "2015-10-19"}}},
+        { "range": { "vote_average": { "gte": 5} }}
+      ]
+    }
+  },
+  "sort": [
+    {
+      "vote_count": {
+        "order": "desc"
+      }
+    },
+    {
+      "release_date":{
+        "order": "desc"
+      }
+    }
+  ]
+}
+
+# 带match 打分的filter
+# should 和 filter 的妙用
+
+GET /tmdb/_search
+{
+  "query": {
+    "bool": {
+      "should": [
+         { "match": {"title": "backstage"}}
+      ], 
+      "filter": [
+        { "term": {"title": "steve"}},
+        { "term": { "overview": "steve"}},
+        { "range": { "release_date": {"lte": "2015-10-19"}}},
+        { "range": { "vote_average": { "gte": 5} }}
+      ]
+    }
+  }
+}
+# 
+GET /tmdb/_search
+{
+  "query": {
+    "bool": {
+      "must": [
+         { "match": {"title": "backstage"}}
+      ], 
+      "filter": [
+        { "term": {"title": "steve"}},
+        { "term": { "overview": "steve"}},
+        { "range": { "release_date": {"lte": "2015-10-19"}}},
+        { "range": { "vote_average": { "gte": 5} }}
+      ]
+    }
+  }
+}
+
+# 自定义score 打分规则
+
+# 查全率 正确的文档有100个文档 查出来却只有40个 则 40%
+# 查准率 查出n个文档，却只有m个 则为 m/n
+# 两者不能兼得 但是可以调整顺序
+
+
+
+# function_score 自定义打分规则
+
+# 原始的打分
+GET /tmdb/_search
+{
+  "query": {
+    "multi_match": {
+      "query": "Steve Jobs",
+      "fields": ["title","overview"],
+      "type": "most_fields",
+      "operator": "or"
+    }
+  }
+}
+
+# 指定function_score
+GET /tmdb/_search
+{
+  "query": {
+    "function_score": {
+      "query": {
+          "multi_match": {
+          "query": "Steve Jobs",
+          "fields": ["title","overview"],
+          "type": "most_fields",
+          "operator": "or"
+        }
+      },
+      "functions": [
+        {"field_value_factor": {
+          "field": "vote_average",
+          "modifier": "log2p",
+          "factor": 1.2
+        }},
+        {"field_value_factor": {
+          "field": "vote_count",
+          "modifier": "log2p",
+          "factor": 1.2
+        }}
+      ],
+      "score_mode": "sum",  // 各个字段调整后的分数相加
+      "boost_mode": "sum" //  与old_score 计算的方式
+    }
+  }
+}
+
+
+
+
+
 
