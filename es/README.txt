@@ -496,6 +496,17 @@ GET /tmdb/_validate/query?explain
   }
 }
 
+# cross_fields 使用词中心的方式进行查询 
+GET /tmdb/_validate/query?explain
+{
+  "query": {
+  "multi_match": {
+    "query":"basketball with cartoom aliens",
+    "fields": ["title","overview"],
+    "type": "cross_fields"
+    }
+  }
+}
 
 
 
